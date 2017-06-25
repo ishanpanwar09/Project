@@ -1,0 +1,126 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+```{r load-data}
+load("_5db435f06000e694f6050a2d43fc7be3_gss.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+The source of the data is the General Social Survey (GSS), the GSS aims to gather data through survey's on US residents for behaivioural and demographic characteristics. One can understand more about American Society through these surveys and data but any finding cannot be generalized because the data comes from various races and differebt language speakers hence only corelation can be calculated and cannot be considered for causation.
+
+Few Insights:-
+1. dim(gss): Rows: 57061 and Col: 114
+2. The gss dataset has NA values
+3. gss$race: is a categorical data resembling various races
+
+* * *
+
+## Part 2: Research question
+
+
+Q1: What is the relationship between race and income of a person, does race influences the kind of mony a person would make. This is kind of a cool thing to check since we live in 21st century having so many equality things going on but are we really supporting the cause?
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+```{r}
+# removing NA
+#gss <- as.data.frame(gss[!(is.na(gss))])
+
+df<- as.data.frame(gss$sex)
+df$coninc<- gss$coninc
+df$race<- gss$race
+df$income <- gss$incom16
+
+names(df) <- c('sex','income','race','incomelevel')
+
+df2<- df%>%
+  select(sex,incomelevel,income,race)%>%
+  group_by(incomelevel,race)%>%
+  summarise(count = n())
+df2<- df2[1:16,]
+
+# Lets View the summary of the data
+table(df$race,df$incomelevel)
+# Lets plot this to consolidate this understanding
+
+p2 <- ggplot(data = df2, aes(x = incomelevel, y = count, group = incomelevel, fill = incomelevel))
+p2 <- p2 + geom_bar(stat = "identity", width = 0.7, position = "dodge") + theme_bw()
+p2 <- p2 + facet_grid(. ~ race) + theme(axis.text.x = element_text(angle = 90))
+p2 + xlab("Income Level") + ylab("Frequency")
+
+# based on the graph we can simply deduce that there should be something with race and incomelevel
+# hence we should actually check.
+```
+
+```{r,echo=FALSE}
+
+cat("When testing an hypothesis with a categorical explanatory variable and a quantitative response variable, the tool normally used in statistics is Analysis of Variances, also called ANOVA. The objective of the ANOVA test is to analyse if there  is a (statistically) significant difference in income, according to their race")
+
+```
+
+```{r}
+# Mathematically, 'race' is explanatory variable and 'income' is response variable
+# anova( dependent variable ~ independent variable)
+
+anova(lm(income ~ race, data=df))
+summary(lm(income ~ race, data=df))
+```
+
+```{r,echo=FALSE}
+cat("The P-Value is very low in comparision to the critical value which is 0.05 and hence we can reject the null hypothesis that Income is 'Independent' of 'Race'.")
+```
+
+```{r}
+# we kind of get an idea here that "White" community have a median high salary.
+plot(gss$coninc ~ gss$race, main="Race vs Income")
+
+```
+
+We see a clear higher median income for "Whites" in the above boxplot and this gives us a question to perform some tests to check if there is any dependence.
+
+* * *
+
+## Part 4: Inference
+
+NULL Hypothesis H0(There is nothing going on): There is no relationship between Race and income level of a person. Alternative Hypothesis HA: There is a relationship between Race and income level of a person.
+
+Check Conditions:
+1.Independence. Sampled observations must be independent. GSS survey is random sample survey. 
+2. Sample size: If sampling without replacement, n < 10% of population.
+3. We are using chisquare test of independence.
+
+```{r}
+summary(table(df$race,df$incomelevel))
+
+# plugging the values from the summary above.
+pchisq(1596.5, 10, lower.tail = FALSE)
+```
+
+##Conclusion:
+
+Since the P-value is zero, We have convincing evidence to reject the null hypothesis in favor of alternative hypothesis that there is a corelation between race and income level of a person.
+
+Since the study method is observational study, we can generalize causal relation and we only concude that there is corelation between race and income level.
