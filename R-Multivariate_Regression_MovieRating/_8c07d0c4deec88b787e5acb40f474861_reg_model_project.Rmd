@@ -1,0 +1,271 @@
+---
+title: "Modeling and prediction for movies"
+output: statsr:::statswithr_lab
+---
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE,warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(GGally)
+library(corrplot)
+```
+
+###Load data
+```{r load-data}
+time <- proc.time()
+load("_e1fe0c85abec6f73c72d73926884eaca_movies.Rdata")
+MovieData <- movies
+```
+
+* * *
+
+## Part 1: Data
+The data collected is random and consists of  ***651 rows*** [651 Movies] and 
+***32 columns*** representing various properties. This data is collected from [IMDB](http://www.imdb.com) and [Rotten Tomatoes](https://www.rottentomatoes.com). 
+
+***The Internet Movie Database (abbreviated IMDb)*** is an online database of information related to films, television programs and video games, including cast, production crew, fictional characters, biographies, plot summaries, trivia and reviews. 
+
+***Rotten Tomatoes*** is a website launched in August 1998 devoted to film reviews, news and details; it is widely known as a film review aggregator. Coverage now includes TV content as well. The name derives from the practice of audiences throwing rotten tomatoes when disapproving of a poor stage performance.
+
+The movie data have several categorical and numerical variables & would be a good fit for modeling to predict the Popularity a movie might get.
+
+* * *
+
+## Part 2: Research question
+
+Predicting the ***Audience Score*** for a movie based on multivariate regression model.
+rediction is based on the following features ***critics_score*** ***runtime*** ***best_actor_win*** 
+
+We will be using the data from [Rotten Tomatoes](https://www.rottentomatoes.com) to check the predictions from the model.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+```{r, warning=FALSE}
+# cleaning data
+movies<- movies[,-1]
+movies<- movies[-30:-31]
+
+#Converting the data set to a numerical data
+df1<-as.matrix(sapply(movies, as.numeric)) 
+df1<- as.data.frame(df1)
+df2 <- df1
+df2 <- df2[-24:-29]
+df2 <- df2[-9:-11]
+df2 <- df2[-5]
+df2 <- df2[-3]
+# finding the correlation between various features.
+cor(df2)
+corrplot(cor(df2), "square")
+
+##### Correlation of Audience Score with various features
+test1<- as.data.frame(as.numeric(movies$title_type))
+names(test1) <- "title_type"
+test1$aud_Sc  <- as.numeric(movies$audience_score)
+test1$genre<- as.numeric(movies$genre)
+test1$best_pic_nomi  <- as.numeric(movies$best_pic_nom)
+test1$MPAA_Rating<-as.numeric(movies$mpaa_rating)
+corrplot(cor(test1),"number")
+
+### Second Round for Correlation of Audience Score for remaining features
+test2 <- as.data.frame(as.numeric(movies$imdb_rating))
+names(test2) <- "imdb_rating"
+test2$imdb_votes  <- as.numeric(movies$imdb_num_votes)
+test2$Crit_Rating <- as.numeric(movies$critics_rating)
+test2$Score_Crit <- as.numeric(movies$critics_score)
+test2$best_pic_nomi <- as.numeric(movies$best_pic_nom)
+test2$aud_sc <-test1$aud_Sc  <- as.numeric(movies$audience_score)
+corrplot(cor(test2),"number")
+```
+
+<div id="exercise">
+***So Far*** we are able to understand the corelation between various features in the dataset. Now we have a clear image of which features would introduce colinearity in the model. So, we can just select features with forwards selection approach and check the adjusted R^2 value and finally work with the significant p-value to get the best model.
+</div>
+
+* * *
+
+## Part 4: Modeling
+
+```{r, model-step 1}
+# Job starts here
+MovieDF<- df1
+# function to extract R-square for different predictors
+model_step1<-function(x) {
+  m<-lm(MovieDF$audience_score ~ x)
+  summary(m)$adj.r.squared
+}
+
+model1.1 <- model_step1(MovieDF$runtime)
+model1.2 <- model_step1(MovieDF$thtr_rel_year)
+model1.3 <- model_step1(MovieDF$thtr_rel_month)
+model1.4 <- model_step1(MovieDF$thtr_rel_day)
+model1.5 <- model_step1(MovieDF$critics_score)  
+model1.6 <- model_step1(MovieDF$best_pic_win)
+model1.7 <- model_step1(MovieDF$best_actor_win)
+model1.8 <- model_step1(MovieDF$best_actress_win)
+model1.9 <- model_step1(MovieDF$best_dir_win)
+model1.10 <- model_step1(MovieDF$top200_box)
+model1.11 <- model_step1(MovieDF$genre)
+model1.12 <- model_step1(MovieDF$mpaa_rating)
+
+M1Value<- c(model1.1,model1.2,model1.3,model1.4,model1.5,model1.6,model1.7,model1.8,model1.9,model1.10,model1.11,model1.12)
+
+cat("Max Adj. R^2 value obtained in this step:",max(M1Value),"for Model1.5 for 'critics_score'")
+
+```
+
+
+```{r,model-step 2}
+model_step2<-function(x) {
+  m<-lm(MovieDF$audience_score ~ movies$critics_score + x)
+  summary(m)$adj.r.squared
+}
+
+model2.1 <- model_step2(MovieDF$runtime)  
+model2.2 <- model_step2(MovieDF$thtr_rel_year)
+model2.3 <- model_step2(MovieDF$thtr_rel_month)
+model2.4 <- model_step2(MovieDF$thtr_rel_day)
+model2.5 <- model_step2(MovieDF$best_pic_win)
+model2.6 <- model_step2(MovieDF$best_actor_win)
+model2.7 <- model_step2(MovieDF$best_actress_win)
+model2.8 <- model_step2(MovieDF$best_dir_win)
+model2.9 <- model_step2(MovieDF$top200_box)
+model2.10 <- model_step2(MovieDF$genre)
+model2.11 <- model_step2(MovieDF$mpaa_rating)
+
+M1Value<- c(model2.1,model2.2,model2.3,model2.4,model2.5,model2.6,model2.7,model2.8,model2.9,model2.10,model2.11)
+
+max(M1Value)
+cat("Max Adj. R^2 value obtained in this step:",max(M1Value),"for Model1.5 for 'runtime'")
+```
+
+```{r, model-step 3}
+model_step3<-function(x) {
+  m<-lm(MovieDF$audience_score ~ movies$critics_score + movies$runtime + x)
+summary(m)$adj.r.squared
+}
+
+model3.1 <- model_step3(MovieDF$thtr_rel_year)
+model3.2 <- model_step3(MovieDF$thtr_rel_month)
+model3.3 <- model_step3(MovieDF$thtr_rel_day)
+model3.4 <- model_step3(MovieDF$best_pic_win)
+model3.5 <- model_step3(MovieDF$best_actor_win) 
+model3.6 <- model_step3(MovieDF$best_actress_win) 
+model3.7 <- model_step3(MovieDF$best_dir_win)
+model3.8 <- model_step3(MovieDF$top200_box)
+model3.9 <- model_step3(MovieDF$genre)
+model3.10 <- model_step3(MovieDF$mpaa_rating)
+
+M1Value<- c(model3.1,model3.2,model3.3,model3.4,model3.5,model3.6,model3.7,model3.8,model3.9,model3.10)
+
+max(M1Value)
+cat("Max Adj. R^2 value obtained in this step:",max(M1Value),"for Model1.5 for 'best_actor_win'")
+```
+
+```{r, model-step 4}
+model_step4<-function(x) {
+  m<-lm(MovieDF$audience_score ~ movies$critics_score + movies$runtime + movies$best_actor_win + x)
+summary(m)$adj.r.squared
+}
+
+model4.1 <- model_step4(MovieDF$thtr_rel_year)
+model4.2 <- model_step4(MovieDF$thtr_rel_month)
+model4.3 <- model_step4(MovieDF$thtr_rel_day)
+model4.4 <- model_step4(MovieDF$best_pic_win)
+model4.5 <- model_step4(MovieDF$best_actress_win)
+model4.6 <- model_step4(MovieDF$best_dir_win)
+model4.7 <- model_step4(MovieDF$top200_box)
+model4.8 <- model_step4(MovieDF$genre)
+model4.9 <- model_step4(MovieDF$mpaa_rating)
+
+M1Value<- c(model4.1,model4.2,model4.3,model4.4,model4.5,model4.6,model4.7,model4.8,model4.9)
+
+max(M1Value)
+cat("Max Adj. R^2 value obtained in this step:",max(M1Value),"for Model1.5 for 'genre'")
+```
+
+<div id="exercise">
+***Insights:*** Model type 4 has the Highest Adjusted R^2 hence we will use the 4 feature model to predict the audience score because the adjusted R^2 value started reducing with adding more features.
+</div>
+
+```{r, Final-Model}
+Final_Model<-lm(audience_score ~ critics_score + genre +runtime + best_actor_win, data = MovieDF)
+summary(Final_Model)
+```
+
+***Ploting the Model with 4 features***
+
+```{r}
+plot(Final_Model)
+```
+
+<div id="exercise">
+Since the p-value of the model is < 0.05, the model is significant, and after doing the diagnostics, we see that the model is a good fit of the data; though the adjusted R^2 is somewhat low at 0.5006, which means that the model only explains around 50% of the variance.
+</div>
+
+<div id="instructions">
+***Interpretation of the equation:***
+PredictedAudienceScore = 29.95147 + (0.50018 * critics_score)- (0.53015 * genre) + (0.07939 * runtime) - (1.66350 * best_actor_win)
+
+***Intercept:***
+
+* A movie with no critics score, and is 0 minutes long, and does not have a Best Actor Win will have a predicted Audience Score of 29.95147 which is almost 30.
+
+***Slope:***
+
+* All else held constant, for each unit increase critics score, the model predicts that the audience score will increase on average by 0.50018
+
+* All else held constant, for a Genre type, the model predicts that the audience score will decrease by 0.53015 on an average
+
+* All else held constant, for each unit increase runtime, the model predicts that the audience score will increase on average by 0.07939
+
+* All else held constant, for a Best Actor Win, the model predicts that the audience score will decrease by 1.66350 on an average
+</div>
+* * *
+
+## Part 5: Prediction
+
+```{r}
+levels(factor(MovieData$genre))
+
+# test data set from website for arrival movie
+Movie2016 <- data.frame(critics_score = 93, runtime = 118, best_actor_win = 0, genre = 6)
+pred<-predict(Final_Model, Movie2016, interval = "prediction", level = 0.95)
+cat("Audience Score for Arrival Movie:",pred[1],"and CI Lower:", pred[2],"CI Upper:",pred[3],"\n")
+
+# test data set from website for "Inferno" movie
+Movie2016 <- data.frame(critics_score = 21, runtime = 121, best_actor_win = 0, genre = 9)
+pred<-predict(Final_Model, Movie2016, interval = "prediction", level = 0.95)
+cat("Audience Score for Inferno Movie:",pred[1],"and CI Lower:", pred[2],"CI Upper:",pred[3],"\n")
+# test data set from website for "Shut In"" movie
+Movie2016 <- data.frame(critics_score = 0, runtime = 91, best_actor_win = 0,genre =9)
+pred<-predict(Final_Model, Movie2016, interval = "prediction", level = 0.95)
+cat("Audience Score for Shut In Movie: ",pred[1],"and CI Lower:", pred[2],"CI Upper:",pred[3],"\n")
+
+
+
+Movie2016 <- data.frame(critics_score = 90, runtime = 147, best_actor_win = 0, genre = 1)
+pred<-predict(Final_Model, Movie2016, interval = "prediction", level = 0.95)
+cat("Audience Score for Inferno Movie:",pred[1],"and CI Lower:", pred[2],"CI Upper:",pred[3],"\n")
+```
+
+<div id="exercise">
+The ***Movies*** used for the prediction with their actual Audience Score can be found by clicking on the link below:
+
+[Arrival](https://www.rottentomatoes.com/m/arrival_2016) : ***Audience Score 83***
+
+[Inferno](https://www.rottentomatoes.com/m/inferno_2016)  : ***Audience Score 43***
+
+[Shut In](https://www.rottentomatoes.com/m/shut_in) : ***Audience Score 27***
+</div>
+
+* * *
+
+## Part 6: Conclusion
+
+The Multivariate Linear Regression Model is able to predict with a variance of 50.06% as adjusted ***R^2*** value, which means that this model can explain upto 50.06% and leaving 49.94% uncovered. The audience score predicted by model is pretty accurate for the data given for training and with the given features. If we can have more features the model can perform better.
