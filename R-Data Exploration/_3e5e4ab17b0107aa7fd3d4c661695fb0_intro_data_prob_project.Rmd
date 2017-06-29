@@ -1,0 +1,186 @@
+---
+title: "Exploring the BRFSS data"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+  word_document: default
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+library(corrplot)
+```
+
+### Load data
+
+```{r load-data}
+load("_384b2d9eda4b29131fb681b243a7767d_brfss2013.RData")
+```
+
+* * *
+
+## Part 1: Data
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is an ongoing surveillance system designed to measure behavioral risk factors for the non-institutionalized adult population (18 years of age and older) residing in the US. The BRFSS was initiated in 1984, with 15 states collecting surveillance data on risk behaviors through monthly telephone interviews.
+
+The BRFSS objective is to collect uniform, state-specific data on preventive health practices and risk behaviors that are linked to chronic diseases, injuries, and preventable infectious diseases that affect the adult population. In conducting the BRFSS landline telephone survey, interviewers collect data from a randomly selected adult in a household. 
+
+In conducting the cellular telephone version of the BRFSS questionnaire, interviewers collect data from an adult who participates by using a cellular telephone and resides in a private residence or college housing.
+
+The data is purely random as the phone number dialing is done using a random digit dialing. Though by this approach a lot of people who doesnot have a phone are left unsurveyed and hence analysis through this data set can not be genralized.
+
+* * *
+
+
+## Part 2: Research questions
+
+**Research quesion 1:** How are "General Health", "Arthritis", "Smoking Habit" and "Monthly Income" related?
+
+**Research quesion 2:** How many people with different health conditions are likely to go up for voting (elections) and how does the likliness affected by location if at all in this process?
+
+**Research quesion 3:** Explore sleeptime of population in the survey as per their income group?
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:** How are "General Health", "Arthritis", "Smoking Habit" and "Monthly Income" related?
+
+```{r}
+df <- brfss2013 %>%
+  group_by(genhlth,arthdis2,scntwrk1,income2,smokday2)%>%
+  filter(!is.na(arthdis2),!is.na(smokday2),!is.na(genhlth),!is.na(income2))
+
+df$pain <- as.integer(df$arthdis2)
+df$genhlth2 <- as.integer(df$genhlth)
+df$smoke <- as.integer(df$smokday2)
+df$income <- as.integer(df$income2)
+
+df2 <- df%>%
+  select(pain,genhlth2,smoke,income)
+
+FinalDF <- data.frame(df2$pain,df2$genhlth2,df2$smoke,df2$income)
+names(FinalDF) <- c("Arthritis","Health","Smokes","Income")
+cor(FinalDF)
+chart <- cor(FinalDF)
+corrplot(chart, method="square",hclust.method = "median",tl.col = "black",tl.srt = 45)
+```
+
+* * *
+**From the above chart above-**
+We see the following conclusions:
+if Income increases then smoking habit, chances of arthritis and having a poor health also increases. But we do not get any strong correlation between any.
+
+* * *
+
+**Research quesion 2:** How many people with different health conditions feels to go up for voting and how does location influence if at all in this process?
+
+**The graph is shown in 2 parts to fit the variables and data for this questions**
+
+```{r}
+dfQ2 <- brfss2013 %>%
+  select(X_state,genhlth,scntvot1)%>%
+  filter(!is.na(X_state),!is.na(genhlth),!is.na(scntvot1))
+
+ggplot(dfQ2, aes(x= genhlth)) + geom_bar(aes(fill = scntvot1), position = "dodge") 
+
+levels(dfQ2$X_state)[levels(dfQ2$X_state) %in% "District of Columbia"] <- 'DC'
+
+dfQ3 <- brfss2013 %>%
+  select(X_state,genhlth,scntvot1)%>%
+  filter(!is.na(genhlth),!is.na(X_state),!is.na(scntvot1))%>%
+  group_by(genhlth,X_state)%>%
+  summarise(count = n())
+
+dfm <- melt(dfQ3, id.vars = c('X_state','genhlth'))
+
+dfm <- dfm %>%
+  arrange(X_state)
+
+levels(dfm$X_state)[levels(dfm$X_state) %in% "District of Columbia"] <- 'DC'
+
+dfm1 <- head(dfm,-26)
+dfm2 <- tail(dfm,25)
+
+p1 <- ggplot(data = dfm1, aes(x = genhlth, y = value, group = genhlth, fill = genhlth))
+p1 <- p1 + geom_bar(stat = "identity", width = 0.7, position = "dodge") + theme_bw()
+p1 <- p1 + facet_grid(. ~ X_state) + theme(axis.text.x = element_text(angle = 90))
+p1 + xlab("General Health") + ylab("Frequency")
+
+p2 <- ggplot(data = dfm2, aes(x = genhlth, y = value, group = genhlth, fill = genhlth))
+p2 <- p2 + geom_bar(stat = "identity", width = 0.7, position = "dodge") + theme_bw()
+p2 <- p2 + facet_grid(. ~ X_state) + theme(axis.text.x = element_text(angle = 90))
+p2 + xlab("General Health") + ylab("Frequency")
+
+```
+
+* * *
+**From the above chart above-**
+
+Part I- We see there are people with excellent, very good and good category of health condition and still they do not go for voting.
+
+Part II- (Considering only the population going for voting, unlike part I) We see some variability of population going for voting with respect to their health conditions and location. We see majorly active guys are in very good or good health condition, which again is a part of this data. But generally by looking at the graphs above it can be said that people with poor health are less likely to turn up on a voting day.
+
+* * *
+
+**Research quesion 3:** How is income related to sleeptime?
+
+**The graph is shown in 2 parts to fit the variables and data for this questions**
+
+```{r}
+sleeptimeIncome<-brfss2013%>%
+  select(sleptim1, income2)%>%
+  filter(!(is.na(sleptim1)), !(is.na(income2)))%>%
+  group_by(income2,sleptim1)%>%
+  summarise(ccc =n())
+
+below25 <- sleeptimeIncome %>%
+  filter(income2 == "Less than $10,000"|| income2 == "Less than $15,000"|| income2 ==  "Less than $20,000"|| income2 ==  "Less than $25,000")
+
+restIncomeGP<- sleeptimeIncome%>%
+  filter(income2 == "Less than $35,000"|| income2 == "Less than $50,000"|| income2 == "Less than $75,000"|| income2 == "$75,000 or more" )
+
+p3 <- ggplot(data = below25, aes(x = sleptim1, y = ccc, group = income2, fill = sleptim1))
+p3 <- p3 + geom_bar(fill = "lightblue",colour="darkgreen",stat = "identity", width = 1, position = "stack") + theme_bw() + xlab("Sleep Time") + ylab("Frequency")
+p3 + facet_grid(. ~ income2) + theme(axis.text.x = element_text(angle = 0))
+
+p4 <- ggplot(data = restIncomeGP, aes(x = sleptim1, y = ccc, group = income2, fill = sleptim1))
+p4 <- p4 + geom_bar(fill = "lightblue",colour="darkgreen",stat = "identity", width = 1, position = "dodge") + theme_bw()+ xlab("Sleep Time") + ylab("Frequency")
+p4 + facet_grid(. ~ income2) + theme(axis.text.x = element_text(angle = 0))
+    ```
+
+```{r test}
+abc<-brfss2013%>%
+  select(sleptim1, income2)%>%
+  filter(!(is.na(sleptim1)), !(is.na(income2)))
+
+ToPrint<-levels(factor(brfss2013$income2))
+
+for(i in 1:length(ToPrint)){
+  bb <-  as.data.frame(abc%>%
+    filter(income2 == ToPrint[i]))
+  
+  cat("the mean sleeptime for",ToPrint[i], "is: ", round(mean(bb$sleptim1),2), "\n")
+}
+
+cor(abc$sleptim1,as.numeric(abc$income2))
+dim(brfss2013)
+```
+
+
+* * *
+**From the above chart above-**
+So, sleep time varies with income. Generally people taking more sleep tends to be either earning really less or earning really good.
+
+**Imp Note-** I didnt intentionally made the same scaling in graphs for this question as we see a big difference and hence the lower values would have been diminished it same scaling.
+
+* * *
