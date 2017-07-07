@@ -2,7 +2,7 @@ How to access files of this project-
 
 1. April_26_5PM Folder:
 	* This folder contains files for metadata extraction using Clarafai.
- 	* Use ‘ImportFiles_Python’ folder to get metedata extracted from images.
+ 	* Use ‘ImportFiles_Python’ folder to get metedata extracted from images using Clarifai (you need a clarifai account for this).
 
 2. metadata_extracted Folder:
 	* contains metadata extracted from step 1 for further usage.
