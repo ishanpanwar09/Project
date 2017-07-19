@@ -105,7 +105,7 @@ We see a clear higher median income for "Whites" in the above boxplot and this g
 
 ## Part 4: Inference
 
-NULL Hypothesis H0(There is nothing going on): There is no relationship between Race and income level of a person. Alternative Hypothesis HA: There is a relationship between Race and income level of a person.
+NULL Hypothesis H0(There is nothing going on): There is no relationship between Race and income level of a person. Alternative Hypothesis HA: There is a relationship between Race and income level of a person and because of this relatinship we see income being affected by somebodies Race.
 
 Check Conditions:
 1.Independence. Sampled observations must be independent. GSS survey is random sample survey. 
